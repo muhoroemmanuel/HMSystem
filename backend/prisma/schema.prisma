@@ -1,0 +1,157 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String
+  name        String
+  role        Role     @relation(fields: [roleId], references: [id])
+  roleId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions String[]
+  users       User[]
+}
+
+model Patient {
+  id                String    @id @default(cuid())
+  firstName         String
+  lastName          String
+  gender            String
+  birthDate         DateTime
+  phone             String
+  email             String?
+  bloodGroup        String
+  status            String
+  primaryCondition  String
+  assignedDoctor    Doctor?   @relation(fields: [assignedDoctorId], references: [id])
+  assignedDoctorId  String?
+  lastVisitAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Doctor {
+  id             String    @id @default(cuid())
+  name           String
+  specialty      String
+  phone          String
+  email          String
+  status         String
+  experienceYears Int
+  rating         Float
+  schedule       String[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  patients       Patient[]
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  patientId   String
+  doctor      Doctor   @relation(fields: [doctorId], references: [id])
+  doctorId    String
+  date        DateTime
+  time        String
+  type        String
+  status      String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  patient       Patient   @relation(fields: [patientId], references: [id])
+  patientId     String
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  appointmentId String?
+  items         String[]
+  amount        Float
+  paidAmount    Float    @default(0)
+  balance       Float
+  status        String
+  paymentMethod String?
+  issuedAt      DateTime
+  dueAt         DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Drug {
+  id                 String   @id @default(cuid())
+  name               String
+  genericName        String
+  category           String
+  form               String
+  strength           String
+  price              Float
+  stock              Int
+  minStock           Int
+  supplier           String
+  expiryDate         DateTime
+  prescriptionRequired Boolean
+  barcode            String   @unique
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Prescription {
+  id          String    @id @default(cuid())
+  patient     Patient   @relation(fields: [patientId], references: [id])
+  patientId   String
+  doctor      Doctor    @relation(fields: [doctorId], references: [id])
+  doctorId    String
+  date        DateTime
+  status      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  items       PrescriptionItem[]
+}
+
+model PrescriptionItem {
+  id            String       @id @default(cuid())
+  prescription  Prescription @relation(fields: [prescriptionId], references: [id])
+  prescriptionId String
+  drugId        String
+  drug          Drug         @relation(fields: [drugId], references: [id])
+  quantity      Int
+}
+
+model Sale {
+  id            String   @id @default(cuid())
+  reference     String   @unique
+  patientName   String
+  items         String[]
+  subtotal      Float
+  discount      Float
+  vat           Float
+  total         Float
+  paymentMethod String
+  time          DateTime
+  prescription  Boolean
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Settings {
+  id                            String   @id @default(cuid())
+  hospitalName                  String
+  location                      String
+  currency                      String
+  defaultAppointmentDuration    String
+  updatedAt                     DateTime @updatedAt
+}
