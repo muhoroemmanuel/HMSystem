@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback, type FormEvent } from "react";
 
 const ROLES = { ADMIN: "admin", DOCTOR: "doctor", RECEPTIONIST: "receptionist", BILLING: "billing", PHARMACIST: "pharmacist" };
 
@@ -50,12 +50,12 @@ const COLORS = {
 };
 
 const SAMPLE_PATIENTS = [
-  { id: "P001", name: "Amara Okonkwo", age: 34, gender: "Female", phone: "+254 712 345 678", email: "amara@email.com", blood: "O+", status: "Active", condition: "Hypertension", lastVisit: "2024-12-10", doctor: "Dr. Kiprotich" },
-  { id: "P002", name: "James Mwangi", age: 52, gender: "Male", phone: "+254 722 987 654", email: "james@email.com", blood: "A-", status: "Active", condition: "Diabetes Type II", lastVisit: "2024-12-08", doctor: "Dr. Njeri" },
-  { id: "P003", name: "Fatuma Wanjiku", age: 28, gender: "Female", phone: "+254 733 111 222", email: "fatuma@email.com", blood: "B+", status: "Inactive", condition: "Asthma", lastVisit: "2024-11-22", doctor: "Dr. Kiprotich" },
-  { id: "P004", name: "David Otieno", age: 45, gender: "Male", phone: "+254 700 333 444", email: "david@email.com", blood: "AB+", status: "Active", condition: "Cardiac Arrhythmia", lastVisit: "2024-12-12", doctor: "Dr. Achieng" },
-  { id: "P005", name: "Grace Kamau", age: 61, gender: "Female", phone: "+254 711 555 666", email: "grace@email.com", blood: "O-", status: "Active", condition: "Osteoporosis", lastVisit: "2024-12-05", doctor: "Dr. Njeri" },
-  { id: "P006", name: "Hassan Musa", age: 39, gender: "Male", phone: "+254 720 777 888", email: "hassan@email.com", blood: "A+", status: "Active", condition: "Migraine", lastVisit: "2024-12-01", doctor: "Dr. Achieng" },
+  { id: "P001", name: "Amara Okonkwo", age: 34, gender: "Female", phone: "+254 712 345 678", email: "amara@email.com", blood: "O+", status: "Active", condition: "Hypertension", lastVisit: "2024-12-10", doctor: "Dr. Kiprotich", createdAt: 1733011200000 },
+  { id: "P002", name: "James Mwangi", age: 52, gender: "Male", phone: "+254 722 987 654", email: "james@email.com", blood: "A-", status: "Active", condition: "Diabetes Type II", lastVisit: "2024-12-08", doctor: "Dr. Njeri", createdAt: 1733032800000 },
+  { id: "P003", name: "Fatuma Wanjiku", age: 28, gender: "Female", phone: "+254 733 111 222", email: "fatuma@email.com", blood: "B+", status: "Inactive", condition: "Asthma", lastVisit: "2024-11-22", doctor: "Dr. Kiprotich", createdAt: 1733054400000 },
+  { id: "P004", name: "David Otieno", age: 45, gender: "Male", phone: "+254 700 333 444", email: "david@email.com", blood: "AB+", status: "Active", condition: "Cardiac Arrhythmia", lastVisit: "2024-12-12", doctor: "Dr. Achieng", createdAt: 1733076000000 },
+  { id: "P005", name: "Grace Kamau", age: 61, gender: "Female", phone: "+254 711 555 666", email: "grace@email.com", blood: "O-", status: "Active", condition: "Osteoporosis", lastVisit: "2024-12-05", doctor: "Dr. Njeri", createdAt: 1733097600000 },
+  { id: "P006", name: "Hassan Musa", age: 39, gender: "Male", phone: "+254 720 777 888", email: "hassan@email.com", blood: "A+", status: "Active", condition: "Migraine", lastVisit: "2024-12-01", doctor: "Dr. Achieng", createdAt: 1733119200000 },
 ];
 
 const SAMPLE_DOCTORS = [
@@ -135,6 +135,8 @@ const styles = `
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
   .btn-primary { background: #185FA5; color: white; }
   .btn-primary:hover { background: #0C447C; }
+  .btn-secondary { background: #f4f6f9; color: #333; border: 1px solid #e8eaed; }
+  .btn-secondary:hover { background: #e8eaed; }
   .btn-outline { background: white; color: #333; border: 1px solid #e8eaed; }
   .btn-outline:hover { background: #f4f6f9; }
   .btn-sm { padding: 5px 12px; font-size: 12px; }
@@ -216,6 +218,22 @@ const styles = `
   .pos-tab.active { background: white; color: #185FA5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
   .presc-card { background: white; border: 1.5px solid #e8eaed; border-radius: 10px; padding: 14px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s; }
   .presc-card:hover { border-color: #185FA5; }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+  .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: radial-gradient(1000px 600px at 15% -10%, #17324d 0%, #0d1b2a 55%); }
+  .login-card { width: 400px; max-width: 92vw; background: #fff; border-radius: 16px; padding: 32px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); }
+  .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-family: "Space Grotesk", sans-serif; font-size: 20px; font-weight: 600; color: #0d1b2a; }
+  .login-sub { font-size: 12.5px; color: #888; margin-bottom: 20px; }
+  .login-err { background: #FCEBEB; color: #791F1F; font-size: 12.5px; border: 1px solid #f6d5d5; border-radius: 8px; padding: 9px 12px; margin-bottom: 14px; }
+  .login-hint { margin-top: 18px; background: #f8f9fa; border: 1px dashed #e2e5ea; border-radius: 10px; padding: 10px 14px; font-size: 11.5px; color: #666; line-height: 1.8; }
+  .login-hint-title { font-weight: 600; color: #444; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; cursor: pointer; }
+  .login-hint code { background: #eaeef4; padding: 1px 5px; border-radius: 4px; font-size: 10.5px; }
+  .logout-btn { width: 100%; justify-content: center; margin-top: 8px; }
+  
+  @media print {
+    #generateReportBtn { display: none !important; }
+    .sidebar, .topbar, .nav-item, .icon-btn, .role-switcher { display: none !important; }
+    .content { padding: 0; margin: 0; }
+  }
 `;
 
 function getInitials(name: string) {
@@ -254,8 +272,9 @@ function BarChart({ data, colors }: { data: { label: string; value: number }[]; 
           <div style={{ fontSize: 10, color: "#888" }}>{d.value}</div>
           <div style={{ width: "100%", height: `${(d.value / max) * 90}px`, background: colors[i % colors.length], borderRadius: "4px 4px 0 0", minHeight: 4 }} />
           <div style={{ fontSize: 10, color: "#aaa" }}>{d.label}</div>
-        </div>
-      ))}
+</div>
+      </div>
+      </div>
     </div>
   );
 }
@@ -277,6 +296,71 @@ function DonutChart({ value, total, color, label }: { value: number; total: numb
       <div style={{ fontSize: 12, color: "#888" }}>{label}</div>
     </div>
   );
+}
+
+function handleGenerateReport() {
+  const reportContent = document.getElementById('report-content')?.innerHTML;
+  
+  if (reportContent) {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <title>MedCore HMS - Patient Report</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { font-family: 'DM Sans', sans-serif; color: #1a1a2e; padding: 32px; line-height: 1.5; }
+            .report-header { text-align: center; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #185FA5; }
+            .report-logo { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 600; color: #0d1b2a; }
+            .report-sub { font-size: 12px; color: #888; margin-top: 4px; }
+            .report-meta { display: flex; justify-content: space-between; margin-bottom: 24px; font-size: 12px; color: #666; }
+            h2 { font-family: 'Space Grotesk', sans-serif; font-size: 16px; color: #0d1b2a; margin: 20px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #e8eaed; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12px; }
+            th { text-align: left; padding: 8px 10px; background: #f8f9fa; color: #666; font-weight: 500; border-bottom: 1px solid #e8eaed; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+            td { padding: 8px 10px; border-bottom: 1px solid #f5f5f5; color: #333; }
+            tr:last-child td { border-bottom: none; }
+            .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+            .metric-card { background: #fff; border: 1px solid #e8eaed; border-radius: 8px; padding: 14px; }
+            .metric-label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+            .metric-value { font-size: 22px; font-weight: 600; font-family: 'Space Grotesk', sans-serif; color: #0d1b2a; }
+            .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="report-header">
+            <div class="report-logo">MedCore HMS</div>
+            <div class="report-sub">Kenyatta National Hospital · Patient Analytics Report</div>
+          </div>
+          <div class="report-meta">
+            <span>Generated: ${new Date().toLocaleString()}</span>
+            <span>Page 1 of 1</span>
+          </div>
+          ${reportContent}
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  } else {
+    window.print();
+  }
 }
 
 function Dashboard({ patients, appointments, bills }: { patients: any[]; appointments: any[]; bills: any[] }) {
@@ -303,8 +387,10 @@ function Dashboard({ patients, appointments, bills }: { patients: any[]; appoint
           <div className="page-title">Dashboard</div>
           <div className="page-subtitle">Monday, December 18, 2024 · Kenyatta National Hospital</div>
         </div>
-        <button className="btn btn-primary" style={{ fontSize: 13 }}>📊 Generate Report</button>
+        <button id="generateReportBtn" className="btn btn-primary" style={{ fontSize: 13 }} onClick={handleGenerateReport}>📊 Generate Report</button>
       </div>
+
+      <div id="report-content">
 
       <div className="grid-4">
         <MetricCard icon="🏥" label="Total Patients" value={patients.length} change="+12 this week" color={COLORS.blue} bg={COLORS.blueSoft} />
@@ -383,6 +469,32 @@ function Dashboard({ patients, appointments, bills }: { patients: any[]; appoint
   );
 }
 
+// VIDEO_PROVIDER_SEAM: replace VideoComingSoon with Daily/Agora/Jitsi component later.
+// Backend seam: backend/src/routes/appointments.ts GET /:id/video-token (currently 501).
+function VideoComingSoon({ roomName, onClose }: { roomName: string; onClose: () => void }) {
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Video Consultation</div>
+          <div className="page-subtitle">Room: {roomName}</div>
+        </div>
+        <button className="btn btn-outline btn-sm" onClick={onClose}>Back</button>
+      </div>
+      <div className="card" style={{ textAlign: "center", padding: 32 }}>
+        <div style={{ fontSize: 16, fontWeight: 700 }}>Video consultation</div>
+        <span className="badge badge-warning" style={{ marginTop: 12, display: "inline-block" }}>Video coming soon</span>
+        <div style={{ fontSize: 13, color: "#666", marginTop: 8 }}>Video provider not configured yet. Booking and records still work.</div>
+        <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
+          <button className="btn btn-outline btn-sm" onClick={() => { try { navigator.clipboard.writeText(roomName); } catch {} }}>Copy room name</button>
+          <button className="btn btn-outline btn-sm" onClick={onClose}>Back</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function Patients({ patients, setPatients }: { patients: any[]; setPatients: (patients: any[]) => void }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -390,20 +502,61 @@ function Patients({ patients, setPatients }: { patients: any[]; setPatients: (pa
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [newPatient, setNewPatient] = useState({ name: "", age: "", gender: "Female", phone: "", email: "", blood: "O+", condition: "" });
 
+  const [bookingAppt, setBookingAppt] = useState<{ id: string; roomName: string } | null>(null);
+  const [showVideo, setShowVideo] = useState<{ roomName: string } | null>(null);
+
+  const handleBookAppointment = async () => {
+    if (!selectedPatient) return;
+    try {
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          patient: selectedPatient.id,
+          doctor: selectedPatient.doctor || "Dr. Kiprotich",
+          date: new Date().toISOString().split("T")[0],
+          time: "09:00",
+          type: "Consultation",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to book appointment");
+      setBookingAppt({ id: data.id, roomName: data.roomName || `hms-appt-${data.id}` });
+    } catch (err: any) {
+      alert(err.message || "Failed to book appointment");
+    }
+  };
+
+  // VIDEO_PROVIDER_SEAM: open placeholder instead of fetching a token.
+  const openVideoPlaceholder = (appointmentId: string, roomName: string) => {
+    void appointmentId;
+    setShowVideo({ roomName });
+  };
+
   const filtered = patients.filter((p) =>
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.id.includes(search)) &&
     (statusFilter === "All" || p.status === statusFilter)
-  );
+  )
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
   const addPatient = () => {
     const id = `P${String(patients.length + 1).padStart(3, "0")}`;
-    setPatients([...patients, { ...newPatient, id, status: "Active", lastVisit: new Date().toISOString().split("T")[0], doctor: "Dr. Kiprotich", age: parseInt(newPatient.age, 10) }]);
+    setPatients([...patients, { ...newPatient, id, status: "Active", lastVisit: new Date().toISOString().split("T")[0], doctor: "Dr. Kiprotich", createdAt: Date.now(), age: parseInt(newPatient.age, 10) }]);
     setShowModal(false);
     setNewPatient({ name: "", age: "", gender: "Female", phone: "", email: "", blood: "O+", condition: "" });
   };
 
+  if (showVideo) {
+    return (
+      <div>
+        <VideoComingSoon roomName={showVideo.roomName} onClose={() => setShowVideo(null)} />
+      </div>
+    );
+  }
+
   return (
     <div>
+      <>
       <div className="page-header">
         <div>
           <div className="page-title">Patient Registry</div>
@@ -529,12 +682,16 @@ function Patients({ patients, setPatients }: { patients: any[]; setPatients: (pa
               </div>
             ))}
             <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
-              <button className="btn btn-primary" style={{ flex: 1 }}>Book Appointment</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleBookAppointment}>Book Appointment</button>
               <button className="btn btn-outline" onClick={() => setSelectedPatient(null)}>Close</button>
+              {bookingAppt && (
+                <button className="btn btn-outline" onClick={() => openVideoPlaceholder(bookingAppt.id, bookingAppt.roomName)}>Join Video Call</button>
+              )}
             </div>
           </div>
         </div>
       )}
+      </>
     </div>
   );
 }
@@ -780,4 +937,658 @@ function Billing({ bills, setBills }: { bills: any[]; setBills: (bills: any[]) =
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>{selected.patient}</div>
               <div style={{ fontSize: 12, color: "#888", marginBottom: 8 }}>Services Rendered</div>
               {selected.items.map((item: string, i: number) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "5px 0", borderBottom: "1px solid #e8e...
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "5px 0", borderBottom: "1px solid #e8eaed" }}>
+                  <span>{item}</span>
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "5px 0", marginTop: 6 }}>
+                <span style={{ color: "#888" }}>Total</span>
+                <span style={{ fontWeight: 600 }}>KES {selected.amount.toLocaleString()}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "5px 0" }}>
+                <span style={{ color: "#888" }}>Paid</span>
+                <span style={{ fontWeight: 600, color: COLORS.teal }}>KES {selected.paid.toLocaleString()}</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
+              <span>Balance Due</span>
+              <span style={{ color: selected.amount - selected.paid > 0 ? COLORS.red : COLORS.teal }}>
+                KES {(selected.amount - selected.paid).toLocaleString()}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              {selected.status !== "Paid" && (
+                <button className="btn btn-primary" onClick={() => markPaid(selected.id)}>Mark Paid</button>
+              )}
+              <button className="btn btn-outline" onClick={() => setSelected(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Pharmacy({ patients }: { patients: any[] }) {
+  const [drugs, setDrugs] = useState<any[]>(SAMPLE_DRUGS);
+  const [prescriptions, setPrescriptions] = useState<any[]>(SAMPLE_PRESCRIPTIONS);
+  const [sales, setSales] = useState<any[]>(SAMPLE_SALES);
+  const [tab, setTab] = useState("POS");
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+  const [cart, setCart] = useState<{ id: string; qty: number }[]>([]);
+  const [patient, setPatient] = useState("Walk-in");
+  const [payMethod, setPayMethod] = useState("M-Pesa");
+  const [receipt, setReceipt] = useState<any>(null);
+
+  const filtered = drugs.filter((d) =>
+    (d.name.toLowerCase().includes(search.toLowerCase()) ||
+      d.generic.toLowerCase().includes(search.toLowerCase())) &&
+    (category === "All" || d.category === category)
+  );
+
+  const addToCart = (id: string) => {
+    const drug = drugs.find((d) => d.id === id);
+    if (!drug || drug.stock <= 0) return;
+    setCart((prev) =>
+      prev.some((c) => c.id === id)
+        ? prev.map((c) => (c.id === id ? { ...c, qty: c.qty + 1 } : c))
+        : [...prev, { id, qty: 1 }]
+    );
+  };
+
+  const changeQty = (id: string, delta: number) =>
+    setCart((prev) =>
+      prev
+        .map((c) => (c.id === id ? { ...c, qty: c.qty + delta } : c))
+        .filter((c) => c.qty > 0)
+    );
+
+  const cartItems = cart
+    .map((c) => ({ ...c, drug: drugs.find((d) => d.id === c.id)! }))
+    .filter((c) => c.drug);
+
+  const subtotal = cartItems.reduce((s, c) => s + c.drug.price * c.qty, 0);
+  const tax = Math.round(subtotal * 0.16);
+  const total = subtotal + tax;
+  const lowStock = drugs.filter((d) => d.stock <= d.minStock).length;
+
+  const checkout = () => {
+    if (cartItems.length === 0) return;
+    const id = String(sales.length + 1).padStart(3, "0");
+    const sale = {
+      id: `S${id}`,
+      ref: `TXN-2412-${id}`,
+      patient,
+      items: cartItems.length,
+      total,
+      method: payMethod,
+      time: new Date().toTimeString().slice(0, 5),
+      prescription: cartItems.some((c) => c.drug.prescription),
+    };
+    setSales([sale, ...sales]);
+    setDrugs((prev) =>
+      prev.map((d) => {
+        const line = cart.find((c) => c.id === d.id);
+        return line ? { ...d, stock: d.stock - line.qty } : d;
+      })
+    );
+    setReceipt({
+      ...sale,
+      lines: cartItems.map((c) => ({ name: c.drug.name, qty: c.qty, price: c.drug.price })),
+    });
+    setCart([]);
+    setPatient("Walk-in");
+  };
+
+  const dispense = (rx: any) => {
+    setPrescriptions((prev) => prev.map((p) => (p.id === rx.id ? { ...p, status: "Dispensed" } : p)));
+    setDrugs((prev) =>
+      prev.map((d) => {
+        const line = rx.drugs.find((x: any) => x.drugId === d.id);
+        return line ? { ...d, stock: d.stock - line.qty } : d;
+      })
+    );
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Pharmacy &amp; POS</div>
+          <div className="page-subtitle">{drugs.length} drugs in inventory · {lowStock} low-stock alerts</div>
+        </div>
+        <div className="pos-tabs">
+          {["POS", "Prescriptions", "Sales"].map((t) => (
+            <button key={t} className={`pos-tab ${tab === t ? "active" : ""}`} onClick={() => setTab(t)}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+      {tab === "POS" && (
+        <div className="pos-layout">
+          <div className="pos-left">
+            <div className="filters" style={{ marginBottom: 0 }}>
+              <div className="topbar-search" style={{ width: 300 }}>
+                <span>🔍</span>
+                <input placeholder="Search drug or generic..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+              <select className="filter-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+                <option>All</option>
+                {DRUG_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div className="drug-grid">
+              {filtered.map((d) => (
+                <div
+                  key={d.id}
+                  className={`drug-tile ${d.stock === 0 ? "out-of-stock" : d.stock <= d.minStock ? "low-stock" : ""}`}
+                  onClick={() => addToCart(d.id)}
+                >
+                  {d.prescription && <span className="rx-badge">Rx</span>}
+                  <div className="drug-name">{d.name}</div>
+                  <div className="drug-generic">{d.generic}</div>
+                  <div className="drug-price">KES {d.price}</div>
+                  <div className="drug-stock">{d.stock === 0 ? "Out of stock" : `${d.stock} in stock`} · Exp {d.expiry}</div>
+                </div>
+              ))}
+              {filtered.length === 0 && (
+                <div className="empty-state"><div className="empty-icon">🔎</div><div>No drugs found</div></div>
+              )}
+            </div>
+          </div>
+
+          <div className="pos-right">
+            <div className="cart-header">
+              <div className="cart-header-title">
+                <span>🛒 Current Sale</span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>{cartItems.length} items</span>
+              </div>
+            </div>
+            <div className="cart-patient">
+              <select className="form-input" value={patient} onChange={(e) => setPatient(e.target.value)}>
+                <option>Walk-in</option>
+                {patients.map((p) => <option key={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="cart-items">
+              {cartItems.length === 0 && (
+                <div className="empty-state" style={{ padding: "32px 12px" }}>
+                  <div className="empty-icon" style={{ fontSize: 28 }}>🧺</div>
+                  <div style={{ fontSize: 12 }}>Tap a drug to add it to the cart</div>
+                </div>
+              )}
+              {cartItems.map((c) => (
+                <div className="cart-item" key={c.id}>
+                  <div style={{ flex: 1 }}>
+                    <div className="cart-item-name">{c.drug.name}</div>
+                    <div className="cart-item-sub">KES {c.drug.price} each</div>
+                  </div>
+                  <div className="qty-ctrl">
+                    <button className="qty-btn" onClick={() => changeQty(c.id, -1)}>-</button>
+                    <span className="qty-num">{c.qty}</span>
+                    <button className="qty-btn" onClick={() => changeQty(c.id, 1)}>+</button>
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 600, minWidth: 56, textAlign: "right" }}>
+                    KES {(c.drug.price * c.qty).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="cart-footer">
+              <div className="cart-total-row"><span>Subtotal</span><span>KES {subtotal.toLocaleString()}</span></div>
+              <div className="cart-total-row"><span>VAT (16%)</span><span>KES {tax.toLocaleString()}</span></div>
+              <div className="cart-grand"><span>Total</span><span>KES {total.toLocaleString()}</span></div>
+              <div className="pay-btns">
+                {["M-Pesa", "Card", "Cash", "Insurance"].map((m) => (
+                  <button key={m} className={`pay-btn ${payMethod === m ? "selected" : ""}`} onClick={() => setPayMethod(m)}>
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="btn btn-primary"
+                style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
+                disabled={cartItems.length === 0}
+                onClick={checkout}
+              >
+                Charge KES {total.toLocaleString()}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "Prescriptions" && (
+        <div>
+          {prescriptions.map((p) => (
+            <div className="presc-card" key={p.id}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{p.patient}</div>
+                  <div style={{ fontSize: 12, color: "#888" }}>{p.id} · {p.doctor} · {p.date}</div>
+                </div>
+                <Badge status={p.status} />
+              </div>
+              <div style={{ margin: "10px 0" }}>
+                {p.drugs.map((rx: any) => {
+                  const drug = drugs.find((d) => d.id === rx.drugId);
+                  return (
+                    <span key={rx.drugId} className="tag" style={{ background: COLORS.blueSoft, color: COLORS.blueText }}>
+                      {drug ? drug.name : rx.drugId} × {rx.qty}
+                    </span>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 12, color: "#888" }}>
+                  Total: KES {p.drugs.reduce((s: number, rx: any) => {
+                    const drug = drugs.find((d) => d.id === rx.drugId);
+                    return s + (drug ? drug.price * rx.qty : 0);
+                  }, 0).toLocaleString()}
+                </span>
+                {p.status === "Pending" && (
+                  <button className="btn btn-primary btn-sm" onClick={() => dispense(p)}>Dispense</button>
+                )}
+              </div>
+            </div>
+          ))}
+          {prescriptions.length === 0 && (
+            <div className="empty-state"><div className="empty-icon">📋</div><div>No prescriptions</div></div>
+          )}
+        </div>
+      )}
+
+      {tab === "Sales" && (
+        <div className="card">
+          <table className="table">
+            <thead>
+              <tr><th>Sale</th><th>Reference</th><th>Customer</th><th>Items</th><th>Total</th><th>Method</th><th>Time</th><th>Rx</th></tr>
+            </thead>
+            <tbody>
+              {sales.map((s) => (
+                <tr key={s.id}>
+                  <td><code style={{ fontSize: 11, background: "#f4f6f9", padding: "2px 6px", borderRadius: 4 }}>{s.id}</code></td>
+                  <td style={{ fontSize: 12, color: "#666" }}>{s.ref}</td>
+                  <td style={{ fontWeight: 500, fontSize: 13 }}>{s.patient}</td>
+                  <td>{s.items}</td>
+                  <td style={{ fontWeight: 600 }}>KES {s.total.toLocaleString()}</td>
+                  <td><span className="tag" style={{ background: COLORS.tealSoft, color: COLORS.tealText }}>{s.method}</span></td>
+                  <td style={{ fontSize: 12, color: "#888" }}>{s.time}</td>
+                  <td>{s.prescription ? <span className="tag" style={{ background: COLORS.amberSoft, color: COLORS.amberText }}>Rx</span> : <span style={{ color: "#ccc" }}>—</span>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {sales.length === 0 && (
+            <div className="empty-state"><div className="empty-icon">🧾</div><div>No sales recorded today</div></div>
+          )}
+        </div>
+      )}
+
+      {receipt && (
+        <div className="success-overlay" onClick={(e) => e.target === e.currentTarget && setReceipt(null)}>
+          <div className="receipt-card">
+            <div style={{ fontSize: 40 }}>✅</div>
+            <div style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 18, fontWeight: 600, marginTop: 8 }}>Payment Successful</div>
+            <div style={{ fontSize: 12, color: "#888", margin: "4px 0 16px" }}>{receipt.ref} · {receipt.time}</div>
+            <div className="bill-summary" style={{ textAlign: "left" }}>
+              {receipt.lines.map((l: any, i: number) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, padding: "4px 0" }}>
+                  <span>{l.name} × {l.qty}</span>
+                  <span style={{ fontWeight: 500 }}>KES {(l.price * l.qty).toLocaleString()}</span>
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 700, marginTop: 8, paddingTop: 8, borderTop: "1px solid #e8eaed" }}>
+                <span>Total ({receipt.method})</span>
+                <span>KES {receipt.total.toLocaleString()}</span>
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: "#888", marginBottom: 14 }}>Customer: {receipt.patient}</div>
+            <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => setReceipt(null)}>
+              New Sale
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SettingsPage({ role, setRole }: { role: string; setRole: (r: string) => void }) {
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Settings</div>
+          <div className="page-subtitle">Roles, permissions and facility configuration</div>
+        </div>
+        <button className="btn btn-primary">Save Changes</button>
+      </div>
+
+      <div className="grid-2">
+        <div className="card">
+          <div className="card-header"><span className="card-title">Role &amp; Permissions</span></div>
+          <div style={{ padding: 20 }}>
+            <div className="form-group">
+              <label className="form-label">Viewing as role</label>
+              <div className="role-switcher">
+                {Object.values(ROLES).map((r) => (
+                  <button key={r} className={`role-btn ${role === r ? "active" : ""}`} onClick={() => setRole(r)}>
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {Object.entries(PERMISSIONS).map(([r, perms]) => (
+              <div key={r} className="stat-row">
+                <span style={{ fontSize: 13, fontWeight: 500, minWidth: 110, textTransform: "capitalize" }}>{r}</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  {perms.map((p) => (
+                    <span key={p} className="tag" style={{ background: COLORS.blueSoft, color: COLORS.blueText }}>{p}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header"><span className="card-title">Facility</span></div>
+          <div style={{ padding: 20 }}>
+            <div className="form-group">
+              <label className="form-label">Facility Name</label>
+              <input className="form-input" defaultValue="Kenyatta National Hospital" />
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">M-Pesa Paybill</label>
+                <input className="form-input" defaultValue="400200" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">VAT Rate</label>
+                <input className="form-input" defaultValue="16%" />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Address</label>
+              <input className="form-input" defaultValue="Hospital Road, Upper Hill, Nairobi" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Emergency Line</label>
+              <input className="form-input" defaultValue="+254 20 272 6300" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const NAV_ITEMS = [
+  { key: "dashboard", label: "Dashboard", icon: "📊", perm: "analytics", group: "Main" },
+  { key: "patients", label: "Patients", icon: "🧑‍🤝‍🧑", perm: "patients", group: "Main" },
+  { key: "appointments", label: "Appointments", icon: "📅", perm: "appointments", group: "Main" },
+  { key: "doctors", label: "Doctors", icon: "👨‍⚕️", perm: "doctors", group: "Clinical" },
+  { key: "pharmacy", label: "Pharmacy", icon: "💊", perm: "pharmacy", group: "Clinical" },
+  { key: "billing", label: "Billing", icon: "💳", perm: "billing", group: "Finance" },
+  { key: "settings", label: "Settings", icon: "⚙️", perm: "settings", group: "System" },
+];
+
+const GROUPS = ["Main", "Clinical", "Finance", "System"];
+
+const PAGE_TITLES: Record<string, string> = {
+  dashboard: "Dashboard",
+  patients: "Patient Registry",
+  appointments: "Appointments",
+  doctors: "Medical Staff",
+  pharmacy: "Pharmacy & POS",
+  billing: "Billing & Payments",
+  settings: "Settings",
+};
+
+function Clock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <span style={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+      {now.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+      {" · "}
+      {now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+    </span>
+  );
+}
+
+const AUTH_STORAGE_KEY = "hms_auth";
+
+type Session = {
+  token: string;
+  user: { id: string; name: string; email: string; role: string };
+};
+
+function readSession(): Session | null {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.token && parsed.user && parsed.user.role) {
+      return parsed as Session;
+    }
+  } catch {
+    // corrupted session - treat as logged out
+  }
+  return null;
+}
+
+function LoginScreen({ onLogin }: { onLogin: (token: string, user: Session["user"]) => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (busy) return;
+    setError("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError((data && data.message) || "Login failed");
+        setBusy(false);
+        return;
+      }
+      onLogin(data.token, data.user);
+    } catch {
+      setError("Cannot reach the auth server - is the backend running on port 4000?");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="login-wrap">
+      <style>{styles}</style>
+      <div className="login-card">
+        <div className="login-logo">
+          <div className="logo-icon">🏥</div>
+          MedCore HMS
+        </div>
+        <div className="login-sub">Sign in to continue to the hospital management system</div>
+        {error && <div className="login-err">{error}</div>}
+        <form onSubmit={submit}>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input className="form-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@hms.ke" autoComplete="username" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" autoComplete="current-password" />
+          </div>
+          <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 4 }} disabled={busy || !email || !password}>
+            {busy ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+        <div className="login-hint">
+          <div className="login-hint-title" onClick={() => setShowHint(!showHint)}>
+            Demo accounts {showHint ? "▾" : "▸"}
+          </div>
+          {showHint && (
+            <>
+              <div><code>admin@hms.ke</code> / <code>admin123</code> - admin</div>
+              <div><code>doctor@hms.ke</code> / <code>doctor123</code> - doctor</div>
+              <div><code>reception@hms.ke</code> / <code>front123</code> - receptionist</div>
+              <div><code>billing@hms.ke</code> / <code>bills123</code> - billing</div>
+              <div><code>pharmacy@hms.ke</code> / <code>rx123</code> - pharmacist</div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function HospitalManagementSystem() {
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<Session["user"] | null>(null);
+  const [role, setRole] = useState<string>(ROLES.ADMIN);
+  const [active, setActive] = useState("dashboard");
+  const [patients, setPatients] = useState<any[]>(SAMPLE_PATIENTS);
+  const [appointments, setAppointments] = useState<any[]>(SAMPLE_APPOINTMENTS);
+  const [bills, setBills] = useState<any[]>(SAMPLE_BILLS);
+
+  useEffect(() => {
+    const session = readSession();
+    if (session) {
+      setToken(session.token);
+      setUser(session.user);
+      setRole(session.user.role);
+    }
+  }, []);
+
+  const can = (perm: string) => (PERMISSIONS[role] || []).includes(perm);
+  const pending = appointments.filter((a) => a.status === "Pending").length;
+  const lowStock = SAMPLE_DRUGS.filter((d) => d.stock <= d.minStock).length;
+  const unpaid = bills.filter((b) => b.status !== "Paid").length;
+  const badges: Record<string, number> = { appointments: pending, pharmacy: lowStock, billing: unpaid };
+
+  const switchRole = (r: string) => {
+    setRole(r);
+    const current = NAV_ITEMS.find((i) => i.key === active);
+    if (current && !(PERMISSIONS[r] || []).includes(current.perm)) {
+      const fallback = NAV_ITEMS.find((i) => (PERMISSIONS[r] || []).includes(i.perm));
+      if (fallback) setActive(fallback.key);
+    }
+  };
+
+  const renderPage = () => {
+    const item = NAV_ITEMS.find((i) => i.key === active);
+    if (!item || !can(item.perm)) {
+      return (
+        <div className="access-denied">
+          <div style={{ fontSize: 40 }}>🔒</div>
+          <div style={{ fontSize: 15, fontWeight: 500 }}>Access Denied</div>
+          <div style={{ fontSize: 12 }}>The “{role}” role does not have permission to view this page.</div>
+        </div>
+      );
+    }
+    switch (active) {
+      case "patients": return <Patients patients={patients} setPatients={setPatients} />;
+      case "appointments": return <Appointments appointments={appointments} setAppointments={setAppointments} />;
+      case "doctors": return <Doctors />;
+      case "pharmacy": return <Pharmacy patients={patients} />;
+      case "billing": return <Billing bills={bills} setBills={setBills} />;
+      case "settings": return <SettingsPage role={role} setRole={switchRole} />;
+      default: return <Dashboard patients={patients} appointments={appointments} bills={bills} />;
+    }
+  };
+
+  if (!token) return <LoginScreen onLogin={(t, u) => { setToken(t); setUser(u); setRole(u.role); localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token: t, user: u })); }} />;
+
+  return (
+    <div className="hms">
+      <style>{styles}</style>
+
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <div className="logo-text"><div className="logo-icon">🏥</div>MedCore HMS</div>
+          <div className="logo-sub">Hospital Management System</div>
+        </div>
+
+        <nav className="sidebar-nav">
+          {GROUPS.map((g) => {
+            const items = NAV_ITEMS.filter((i) => i.group === g && can(i.perm));
+            if (items.length === 0) return null;
+            return (
+              <div key={g}>
+                <div className="nav-section">{g}</div>
+                {items.map((item) => (
+                  <div
+                    key={item.key}
+                    className={`nav-item ${active === item.key ? "active" : ""}`}
+                    onClick={() => setActive(item.key)}
+                  >
+                    <span className="icon">{item.icon}</span>
+                    {item.label}
+                    {badges[item.key] ? <span className="nav-badge">{badges[item.key]}</span> : null}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="user-card">
+            <div className="user-avatar">{user?.name?.[0] || "A"}</div>
+            <div className="user-info">
+              <div className="user-name">{user?.name || "Guest"}</div>
+              <div className="user-role">{role}</div>
+            </div>
+          </div>
+          {user && (
+            <button className="btn btn-secondary" style={{ width: "100%", marginTop: 8 }} onClick={() => { setToken(null); setUser(null); setRole(ROLES.ADMIN); localStorage.removeItem(AUTH_STORAGE_KEY); }}>Sign Out</button>
+          )}
+          <div className="role-switcher" style={{ marginTop: 10 }}>
+            {Object.values(ROLES).map((r) => (
+              <button key={r} className={`role-btn ${role === r ? "active" : ""}`} onClick={() => switchRole(r)}>
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      <div className="main">
+        <header className="topbar">
+          <div className="topbar-title">{PAGE_TITLES[active] || "MedCore HMS"}</div>
+          <div className="topbar-search">
+            <span>🔍</span>
+            <input placeholder="Search patients, invoices, drugs..." />
+          </div>
+          <div className="topbar-actions">
+            <Clock />
+            <button className="icon-btn" style={{ position: "relative" }}>
+              🔔
+              {pending > 0 && <span className="notif-dot" style={{ background: COLORS.amber, position: "absolute", top: 7, right: 7 }} />}
+            </button>
+            <button className="icon-btn">⚙️</button>
+            {user && (
+              <button className="btn btn-secondary" style={{ padding: "6px 14px", fontSize: 12 }} onClick={() => { setToken(null); setUser(null); setRole(ROLES.ADMIN); localStorage.removeItem(AUTH_STORAGE_KEY); }}>Sign Out</button>
+            )}
+          </div>
+        </header>
+        <main className="content">{renderPage()}</main>
+      </div>
+    </div>
+  );
+}

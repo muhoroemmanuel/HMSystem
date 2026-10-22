@@ -19,10 +19,18 @@ model User {
 }
 
 model Role {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  permissions String[]
+  id          String              @id @default(cuid())
+  name        String              @unique
   users       User[]
+  permissions RolePermission[]
+}
+
+model RolePermission {
+  id          String   @id @default(cuid())
+  role        Role     @relation(fields: [roleId], references: [id])
+  roleId      String
+  permission  String
+  @@unique([roleId, permission])
 }
 
 model Patient {
@@ -36,11 +44,14 @@ model Patient {
   bloodGroup        String
   status            String
   primaryCondition  String
-  assignedDoctor    Doctor?   @relation(fields: [assignedDoctorId], references: [id])
+  assignedDoctor    Doctor?      @relation(fields: [assignedDoctorId], references: [id])
   assignedDoctorId  String?
   lastVisitAt       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  appointments      Appointment[]
+  invoices          Invoice[]
+  prescriptions     Prescription[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 }
 
 model Doctor {
@@ -53,9 +64,10 @@ model Doctor {
   experienceYears Int
   rating         Float
   schedule       String[]
+  patients       Patient[]
+  appointments   Appointment[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
-  patients       Patient[]
 }
 
 model Appointment {
@@ -105,6 +117,7 @@ model Drug {
   expiryDate         DateTime
   prescriptionRequired Boolean
   barcode            String   @unique
+  prescriptionItems  PrescriptionItem[]
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
@@ -134,8 +147,9 @@ model PrescriptionItem {
 model Sale {
   id            String   @id @default(cuid())
   reference     String   @unique
-  patientName   String
-  items         String[]
+  patient       Patient? @relation(fields: [patientId], references: [id])
+  patientId     String?
+  items         SaleItem[]
   subtotal      Float
   discount      Float
   vat           Float
@@ -145,6 +159,17 @@ model Sale {
   prescription  Boolean
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  saleId    String
+  drug      Drug     @relation(fields: [drugId], references: [id])
+  drugId    String
+  quantity  Int
+  unitPrice Float
+  subtotal  Float
 }
 
 model Settings {

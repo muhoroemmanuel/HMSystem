@@ -1,4 +1,14 @@
-node_modules
-dist
+node_modules/
+dist/
+*.log
 .env
-.DS_Store
+.env.local
+
+# Local tooling / IDE artifacts
+.kilo/
+
+# Build output
+frontend/out.css
+
+# External provider config (environment-specific)
+supabase/
