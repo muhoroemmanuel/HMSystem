@@ -16,7 +16,8 @@
     "test": "npm --workspace hms-frontend run test",
     "typecheck": "npm --workspace hms-backend run typecheck && npm --workspace hms-frontend exec tsc --noEmit",
     "db:demo": "npm --workspace hms-backend run db:demo",
-    "db:reset": "npm --workspace hms-backend run db:migrate && npm --workspace hms-backend run db:seed"
+    "db:reset": "npm --workspace hms-backend run db:migrate && npm --workspace hms-backend run db:seed",
+    "test:e2e": "node scripts/test-e2e.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

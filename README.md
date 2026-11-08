@@ -186,13 +186,45 @@ frontend/
 ### Tests
 
 ```bash
-npm run test        # 20 interaction + render tests against a running API and database
+npm run test:e2e    # self-contained: builds a throwaway database, boots the API, runs all 20 tests
 ```
 
-The suite exercises the landing page, the full booking journey, booking lookups, sign-in
-failure/success, and every staff screen. Start the API first (`npm run dev:backend`) and ensure
-`ADMIN_EMAIL` / `ADMIN_PASSWORD` in `backend/.env` match (or override with `TEST_ADMIN_EMAIL`
-and `TEST_ADMIN_PASSWORD`).
+`test:e2e` is what CI runs and it is the recommended way to verify a checkout. It creates its
+own empty database in `backend/.data` on port 5433, seeds it, starts the API on port 4001, runs
+the suite, then deletes the database — so it never touches your development data and you do not
+need anything else running.
+
+The 20 tests cover the landing page, the full booking journey, booking lookups, sign-in
+failure/success, and every staff screen. They exercise the real UI against the real API, not
+mocks, which is why the database has to exist.
+
+If you would rather run them against a server you already have:
+
+```bash
+cd frontend
+TEST_API_ORIGIN=http://127.0.0.1:4000 \
+TEST_ADMIN_PASSWORD=<your admin password> \
+npx vitest run
+```
+
+Two things to know when pointing the suite at your own database:
+
+- The administrator password must match (`TEST_ADMIN_PASSWORD`; it cannot be guessed).
+- Raise `LOGIN_RATE_LIMIT` and `BOOKING_RATE_LIMIT` in `backend/.env`. The suite performs dozens
+  of sign-ins and bookings in seconds, and the production limits will trip — the failures look
+  like application bugs but are just rate limiting. `backend/.env.test` has suitable values.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`:
+
+| Job | What it does |
+| --- | --- |
+| `verify` | `npm ci`, `npm run typecheck`, `npm run build` |
+| `e2e` | `npm run test:e2e` — the full 20-test suite against a real database |
+
+Nothing needs configuring in GitHub — no secrets, no external database. The embedded Postgres
+means CI is self-contained.
 
 ---
 

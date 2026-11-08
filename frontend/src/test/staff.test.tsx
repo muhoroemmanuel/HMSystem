@@ -13,6 +13,7 @@ import BillingPage from "../pages/BillingPage";
 import PharmacyPage from "../pages/PharmacyPage";
 import DoctorsPage from "../pages/DoctorsPage";
 import SettingsPage from "../pages/SettingsPage";
+import { api } from "../lib/api";
 
 const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || "admin@medcore.ke";
 const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || "ChangeMe-Now-2026";
@@ -184,6 +185,7 @@ describe("settings screen", () => {
     renderStaff(<SettingsPage />);
 
     await waitFor(() => expect(screen.getByText(/clinic name/i)).toBeInTheDocument(), { timeout: 15000 });
-    expect(screen.getByDisplayValue("Kampi Medical Centre")).toBeInTheDocument();
+    const site = await api.get<{ settings: { clinicName: string } }>("/public/site");
+    expect(screen.getByDisplayValue(site.settings.clinicName)).toBeInTheDocument();
   });
 });
