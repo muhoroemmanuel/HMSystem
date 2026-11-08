@@ -186,7 +186,7 @@ frontend/
 ### Tests
 
 ```bash
-npm run test:e2e    # self-contained: builds a throwaway database, boots the API, runs all 20 tests
+npm run test:e2e    # self-contained: builds a throwaway database, boots the API, runs all 24 tests
 ```
 
 `test:e2e` is what CI runs and it is the recommended way to verify a checkout. It creates its
@@ -194,8 +194,8 @@ own empty database in `backend/.data` on port 5433, seeds it, starts the API on 
 the suite, then deletes the database — so it never touches your development data and you do not
 need anything else running.
 
-The 20 tests cover the landing page, the full booking journey, booking lookups, sign-in
-failure/success, and every staff screen. They exercise the real UI against the real API, not
+The 24 tests cover the landing page, the full booking journey, booking lookups, sign-in
+failure/success, every staff screen, and session handling (concurrent refreshes and sign-out). They exercise the real UI against the real API, not
 mocks, which is why the database has to exist.
 
 If you would rather run them against a server you already have:
@@ -221,7 +221,7 @@ Two things to know when pointing the suite at your own database:
 | Job | What it does |
 | --- | --- |
 | `verify` | `npm ci`, `npm run typecheck`, `npm run build` |
-| `e2e` | `npm run test:e2e` — the full 20-test suite against a real database |
+| `e2e` | `npm run test:e2e` — the full 24-test suite against a real database |
 
 Nothing needs configuring in GitHub — no secrets, no external database. The embedded Postgres
 means CI is self-contained.

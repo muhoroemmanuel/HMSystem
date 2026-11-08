@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { one, query } from "../db";
 import { forbidden, unauthorized } from "../lib/errors";
 
@@ -68,38 +68,141 @@ export async function issueRefreshToken(
   userId: string,
   userAgent: string | undefined,
   ip: string | undefined,
-): Promise<string> {
-  const token = newRefreshToken();
-  await query(
+  explicitToken?: string,
+): Promise<{ id: string; token: string }> {
+  const token = explicitToken ?? newRefreshToken();
+  // A deterministic successor may already have been inserted by the request
+  // that won the race; keep that row rather than failing on the unique index.
+  const row = await one<{ id: string }>(
     `INSERT INTO refresh_tokens (user_id, token_hash, user_agent, ip, expires_at)
-     VALUES ($1, $2, $3, $4, now() + ($5 || ' days')::interval)`,
+     VALUES ($1, $2, $3, $4, now() + ($5 || ' days')::interval)
+     ON CONFLICT (token_hash) DO UPDATE SET token_hash = EXCLUDED.token_hash
+     RETURNING id`,
     [userId, sha256(token), userAgent?.slice(0, 300) ?? null, ip ?? null, String(REFRESH_TTL_DAYS)],
   );
-  return token;
+  return { id: row!.id, token };
 }
 
+/**
+ * How long a client may replay an already-rotated refresh cookie and still be
+ * given the successor token. Browsers fire requests in parallel, so a second
+ * refresh arriving a few hundred milliseconds late is completely normal.
+ * Without this window that ordinary race looks identical to token theft and
+ * logs the user out mid-shift.
+ */
+const REFRESH_REUSE_GRACE_MS = Number(process.env.REFRESH_REUSE_GRACE_SECONDS || 120) * 1000;
+
+/**
+ * Derives the successor to a refresh token.
+ *
+ * Rotation is a *chain*: each token maps to exactly one next token, computed
+ * with a server-side key. That makes rotation idempotent — every request that
+ * presents the same token computes the same successor, so a lost race can be
+ * answered with a usable token instead of an error, and all tabs converge.
+ *
+ * An attacker holding a stolen token cannot derive the successor without this
+ * key, and replaying the stolen token after the grace window still trips theft
+ * detection.
+ */
+function deriveSuccessor(rawToken: string): string {
+  const key = process.env.REFRESH_DERIVE_KEY || process.env.JWT_SECRET || "";
+  return createHmac("sha256", key).update(`refresh-chain:${rawToken}`).digest("base64url");
+}
+
+interface TokenRow {
+  id: string;
+  user_id: string;
+  revoked_at: string | null;
+  expires_at: string;
+  replaced_by: string | null;
+}
+
+/**
+ * Exchanges a refresh token for its successor.
+ *
+ * The UPDATE only matches while `revoked_at` is still NULL, so exactly one
+ * request performs the rotation and the rest observe it as already done.
+ *
+ * - Inside the grace window a replay is answered with the successor token, so
+ *   two tabs refreshing at the same moment both stay signed in.
+ * - A revoked token outside the window, or one that was revoked without being
+ *   rotated (deliberate sign-out, password reset), is treated as theft: every
+ *   session for that account ends.
+ */
 export async function rotateRefreshToken(
   rawToken: string,
   userAgent: string | undefined,
   ip: string | undefined,
 ): Promise<{ userId: string; token: string } | null> {
-  const row = await one<{ id: string; user_id: string; revoked_at: string | null; expires_at: string }>(
-    `SELECT id, user_id, revoked_at, expires_at FROM refresh_tokens WHERE token_hash = $1`,
+  const row = await one<TokenRow>(
+    `SELECT id, user_id, revoked_at, expires_at, replaced_by
+       FROM refresh_tokens WHERE token_hash = $1`,
     [sha256(rawToken)],
   );
   if (!row) return null;
-  if (row.revoked_at) {
-    // Re-use of a revoked token: assume theft, kill every session for the user.
-    await query(`UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`, [
-      row.user_id,
-    ]);
-    return null;
-  }
   if (new Date(row.expires_at).getTime() < Date.now()) return null;
 
-  await query(`UPDATE refresh_tokens SET revoked_at = now() WHERE id = $1`, [row.id]);
-  const token = await issueRefreshToken(row.user_id, userAgent, ip);
-  return { userId: row.user_id, token };
+  if (row.revoked_at) {
+    return replay(row, rawToken, userAgent, ip);
+  }
+
+  // Prepare the successor before touching the old row, so the rotation itself
+  // can be a single statement. Revoking first and linking afterwards leaves a
+  // window where another request sees a revoked token with no successor and
+  // mistakes an ordinary race for theft.
+  const successor = deriveSuccessor(rawToken);
+  const issued = await issueRefreshToken(row.user_id, userAgent, ip, successor);
+
+  const claimed = await one<{ id: string }>(
+    `UPDATE refresh_tokens SET revoked_at = now(), replaced_by = $2
+      WHERE id = $1 AND revoked_at IS NULL
+      RETURNING id`,
+    [row.id, issued.id],
+  );
+
+  if (claimed) return { userId: row.user_id, token: successor };
+
+  // Lost the race: the winner has already set both columns atomically.
+  const current = await one<TokenRow>(
+    `SELECT id, user_id, revoked_at, expires_at, replaced_by
+       FROM refresh_tokens WHERE id = $1`,
+    [row.id],
+  );
+  if (!current?.revoked_at) return null;
+  return replay(current, rawToken, userAgent, ip);
+}
+
+/**
+ * A token that has already been rotated. Hand back its successor while the
+ * client is merely late; otherwise assume the token was stolen.
+ */
+async function replay(
+  row: TokenRow,
+  rawToken: string,
+  userAgent: string | undefined,
+  ip: string | undefined,
+): Promise<{ userId: string; token: string } | null> {
+  const revokedAt = row.revoked_at ? new Date(row.revoked_at).getTime() : 0;
+  const withinGrace = Date.now() - revokedAt <= REFRESH_REUSE_GRACE_MS;
+
+  // Only a token that was rotated has a successor. A token revoked any other
+  // way (sign-out, password change, "sign out everywhere") must never work
+  // again, no matter how recently it happened.
+  const rotated = row.replaced_by !== null;
+
+  if (rotated && withinGrace) {
+    const successor = deriveSuccessor(rawToken);
+    const issued = await issueRefreshToken(row.user_id, userAgent, ip, successor);
+    return { userId: row.user_id, token: successor };
+  }
+
+  // Reuse of a rotation outside the window, or replay of a deliberately ended
+  // session: assume theft and end every session for this account.
+  await query(
+    `UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`,
+    [row.user_id],
+  );
+  return null;
 }
 
 export async function revokeRefreshToken(rawToken: string): Promise<void> {

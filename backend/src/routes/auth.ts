@@ -83,7 +83,7 @@ router.post(
 
     const refresh = await issueRefreshToken(row.id, req.headers["user-agent"], req.ip);
     await query(`UPDATE users SET last_login_at = now() WHERE id = $1`, [row.id]);
-    setRefreshCookie(res, refresh);
+    setRefreshCookie(res, refresh.token);
 
     await audit(req, "login", "user", row.id, { email: row.email });
 

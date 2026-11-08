@@ -66,6 +66,10 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   ip          text,
   expires_at  timestamptz NOT NULL,
   revoked_at  timestamptz,
+  -- Set when a token is rotated. The token that replaced it, so a client that
+  -- replays the old cookie (a second browser tab refreshing at the same moment)
+  -- can be handed the same successor instead of being treated as an attacker.
+  replaced_by uuid REFERENCES refresh_tokens(id) ON DELETE SET NULL,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
