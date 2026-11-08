@@ -1,14 +1,32 @@
+# dependencies
 node_modules/
+
+# build output
 dist/
+frontend/out.css
+
+# logs
 *.log
+
+# environment / secrets
 .env
 .env.local
+.env.*.local
 
-# Local tooling / IDE artifacts
+# local embedded database (DEV_DB=true) - never commit
+backend/.data/
+.data/
+
+# test / tooling artifacts
+coverage/
+.vitest/
+.tmp-e2e/
+
+# editor / OS
 .kilo/
-
-# Build output
-frontend/out.css
+.DS_Store
+.idea/
+.vscode/
 
 # External provider config (environment-specific)
 supabase/

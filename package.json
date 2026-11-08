@@ -1,16 +1,28 @@
 {
   "name": "hms-system",
+  "version": "1.0.0",
   "private": true,
+  "description": "MedCore HMS - clinic website with patient booking plus a staff management system",
   "workspaces": [
     "backend",
     "frontend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "cd backend && npm install && npm run dev",
-    "dev:frontend": "cd frontend && npm install && npm run dev"
+    "dev": "concurrently -n api,web -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "dev:backend": "npm --workspace hms-backend run dev",
+    "dev:frontend": "npm --workspace hms-frontend run dev",
+    "setup": "npm --workspace hms-backend run db:migrate && npm --workspace hms-backend run db:seed",
+    "build": "npm --workspace hms-backend run build && npm --workspace hms-frontend run build",
+    "test": "npm --workspace hms-frontend run test",
+    "typecheck": "npm --workspace hms-backend run typecheck && npm --workspace hms-frontend exec tsc --noEmit",
+    "db:demo": "npm --workspace hms-backend run db:demo",
+    "db:reset": "npm --workspace hms-backend run db:migrate && npm --workspace hms-backend run db:seed",
+    "test:e2e": "node scripts/test-e2e.mjs"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6"
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
