@@ -23,9 +23,14 @@ const API_PORT = Number(process.env.TEST_API_PORT || 4001);
 const DB_PORT = Number(process.env.TEST_DB_PORT || 5433);
 const API_ORIGIN = `http://127.0.0.1:${API_PORT}`;
 
+// A directory of its own: the run must never be able to touch the database a
+// developer has open in another terminal.
+const TEST_DB_DIR = path.join("..", ".tmp-e2e", "pglite");
+
 const config = {
   NODE_ENV: "test",
   DEV_DB: "true",
+  DEV_DB_DIR: TEST_DB_DIR,
   DEV_DB_PORT: String(DB_PORT),
   PORT: String(API_PORT),
   JWT_SECRET: "test-only-secret-value-not-used-in-production-000000",
@@ -73,9 +78,11 @@ function waitForPort(port, timeoutMs = 90_000) {
   });
 }
 
-function cleanupData(dataDir) {
+const testDbRoot = path.resolve(backend, "..", ".tmp-e2e");
+
+function cleanupData(dir) {
   try {
-    fs.rmSync(dataDir, { recursive: true, force: true });
+    fs.rmSync(dir, { recursive: true, force: true });
   } catch {
     /* best effort */
   }
@@ -84,7 +91,7 @@ function cleanupData(dataDir) {
 let api;
 try {
   // Always start from an empty database so results never depend on leftovers.
-  cleanupData(path.join(backend, ".data"));
+  cleanupData(testDbRoot);
 
   console.log("\n[test:e2e] applying schema");
   run("npx", ["tsx", "src/cli/migrate.ts"], backend);
@@ -120,6 +127,6 @@ try {
   if (api && !api.killed) {
     api.kill("SIGKILL");
   }
-  cleanupData(path.join(backend, ".data"));
+  cleanupData(testDbRoot);
   console.log("[test:e2e] done");
 }

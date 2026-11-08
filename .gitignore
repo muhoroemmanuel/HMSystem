@@ -20,6 +20,7 @@ backend/.data/
 # test / tooling artifacts
 coverage/
 .vitest/
+.tmp-e2e/
 
 # editor / OS
 .kilo/

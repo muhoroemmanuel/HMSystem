@@ -73,7 +73,11 @@ export async function initDatabase(): Promise<void> {
     const { PGlite } = await import("@electric-sql/pglite");
     const { PGLiteSocketServer } = await import("@electric-sql/pglite-socket");
     const port = Number(process.env.DEV_DB_PORT || 5432);
-    const dataDir = path.resolve(process.cwd(), ".data", "pglite");
+    // DEV_DB_DIR lets the e2e runner use a directory of its own, so a test run
+    // can never touch the database a developer is working against.
+    const dataDir = process.env.DEV_DB_DIR
+      ? path.resolve(process.cwd(), process.env.DEV_DB_DIR)
+      : path.resolve(process.cwd(), ".data", "pglite");
 
     // PGlite allows only ONE process to own a data directory. Two processes
     // writing the same files corrupts it, so refuse early with a clear message
