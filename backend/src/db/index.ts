@@ -33,32 +33,117 @@ function sslFor(url: string): false | { rejectUnauthorized: boolean } {
 }
 
 /**
- * Throws if something (usually a running API in another terminal) already
- * listens on the embedded database port.
+ * Claims sole ownership of a database directory.
+ *
+ * The embedded database is a set of files. Two processes writing them at once
+ * corrupts the store, and the damage is not obvious until much later. A port
+ * check is not enough: on Windows a port can be reserved by the OS (Hyper-V and
+ * WinNAT reserve ranges), and two copies configured with different ports would
+ * both open the same files. A lock file does not depend on either.
  */
-async function assertPortFree(port: number): Promise<void> {
+async function acquireDataDirLock(dataDir: string): Promise<void> {
+  const lockPath = path.join(dataDir, "owner.lock");
+
+  const readOwner = async (): Promise<number | null> => {
+    try {
+      const raw = await fs.readFile(lockPath, "utf8");
+      const pid = Number(raw.trim());
+      return Number.isInteger(pid) && pid > 0 ? pid : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const isAlive = (pid: number): boolean => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch (err) {
+      // EPERM means the process exists but belongs to someone else.
+      return (err as NodeJS.ErrnoException).code === "EPERM";
+    }
+  };
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await fs.writeFile(lockPath, String(process.pid), { flag: "wx" });
+      return;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    }
+
+    const owner = await readOwner();
+    if (owner && owner !== process.pid && isAlive(owner)) {
+      throw new Error(
+        `This database is already open in another process (pid ${owner}).\n` +
+          "      The embedded database can only be used by one process at a time.\n" +
+          "      Stop the running API (Ctrl-C in its terminal) and try again.\n" +
+          "      db:migrate, db:seed and db:demo must run while the API is stopped.",
+      );
+    }
+
+    // The previous owner died without cleaning up. Take the lock over.
+    await fs.rm(lockPath, { force: true });
+  }
+
+  throw new Error(`Could not lock the database directory: ${dataDir}`);
+}
+
+/**
+ * True when a port can be bound on loopback. Some Windows installations reserve
+ * ports (Hyper-V / WinNAT), which surfaces as EACCES rather than EADDRINUSE.
+ */
+async function portIsAvailable(port: number): Promise<boolean> {
   const net = await import("node:net");
-  await new Promise<void>((resolve, reject) => {
+  return new Promise((resolve) => {
     const probe = net.createServer();
-    probe.once("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "EADDRINUSE") {
-        reject(
-          new Error(
-            `Port ${port} is already in use — the embedded database can only be opened by one ` +
-              "process at a time.\n" +
-              "      Stop the running API (Ctrl-C in its terminal) and try again.\n" +
-              "      Commands such as db:migrate, db:seed and db:demo must run while the API is stopped.",
-          ),
-        );
-      } else {
-        reject(err);
-      }
-    });
-    probe.once("listening", () => {
-      probe.close(() => resolve());
-    });
+    probe.once("error", () => resolve(false));
+    probe.once("listening", () => probe.close(() => resolve(true)));
     probe.listen(port, "127.0.0.1");
   });
+}
+
+/**
+ * Chooses the port for the embedded database.
+ *
+ * The port is internal — nothing outside this process connects to it — so any
+ * free port will do. If the configured one is unusable but was set explicitly
+ * by the user, that is an error worth reporting rather than silently ignoring.
+ */
+async function chooseDbPort(): Promise<number> {
+  const configured = process.env.DEV_DB_PORT ? Number(process.env.DEV_DB_PORT) : null;
+  const preferred = configured ?? 5432;
+
+  if (await portIsAvailable(preferred)) return preferred;
+
+  if (configured) {
+    throw new Error(
+      `DEV_DB_PORT=${configured} cannot be used on this machine.\n` +
+        "      Either another program owns that port, or Windows has reserved it\n" +
+        "      (Hyper-V and WinNAT reserve ranges of ports).\n" +
+        `      Fix it in backend/.env: change DEV_DB_PORT to a different number\n` +
+        "      (5433, 5434, 5435 ... whichever is free), or delete the line entirely\n" +
+        "      and a free port will be chosen for you automatically.",
+    );
+  }
+
+  // Nothing was configured, so fall back to a port the OS gives us.
+  const net = await import("node:net");
+  const ephemeral = await new Promise<number | null>((resolve) => {
+    const srv = net.createServer();
+    srv.once("error", () => resolve(null));
+    srv.listen(0, "127.0.0.1", () => {
+      const address = srv.address();
+      const port = typeof address === "object" && address ? address.port : null;
+      srv.close(() => resolve(port));
+    });
+  });
+
+  if (!ephemeral) throw new Error("Could not find a free port for the embedded database.");
+  console.log(
+    `[db] port ${preferred} is not usable on this machine (reserved or in use); using ${ephemeral} instead`,
+  );
+  return ephemeral;
 }
 
 export function isEmbeddedDb(): boolean {
@@ -72,20 +157,19 @@ export async function initDatabase(): Promise<void> {
   if (String(process.env.DEV_DB).toLowerCase() === "true") {
     const { PGlite } = await import("@electric-sql/pglite");
     const { PGLiteSocketServer } = await import("@electric-sql/pglite-socket");
-    const port = Number(process.env.DEV_DB_PORT || 5432);
+    const port = await chooseDbPort();
     // DEV_DB_DIR lets the e2e runner use a directory of its own, so a test run
     // can never touch the database a developer is working against.
     const dataDir = process.env.DEV_DB_DIR
       ? path.resolve(process.cwd(), process.env.DEV_DB_DIR)
       : path.resolve(process.cwd(), ".data", "pglite");
 
-    // PGlite allows only ONE process to own a data directory. Two processes
-    // writing the same files corrupts it, so refuse early with a clear message
-    // instead of failing later with an opaque WASM error.
-    await assertPortFree(port);
-
     // PGlite will not create nested directories itself.
-    await fs.mkdir(path.dirname(dataDir), { recursive: true });
+    await fs.mkdir(dataDir, { recursive: true });
+
+    // PGlite allows only ONE process to own a data directory. Two processes
+    // writing the same files corrupts it, so claim it before opening it.
+    await acquireDataDirLock(dataDir);
 
     const db = await PGlite.create({ dataDir });
     const server = new PGLiteSocketServer({
@@ -99,6 +183,7 @@ export async function initDatabase(): Promise<void> {
       stop: async () => {
         await server.stop();
         await db.close();
+        await fs.rm(path.join(dataDir, "owner.lock"), { force: true }).catch(() => undefined);
       },
     };
     console.log(`[db] embedded PostgreSQL (PGlite) on 127.0.0.1:${port} - ${dataDir}`);
@@ -113,8 +198,12 @@ export async function initDatabase(): Promise<void> {
   } else {
     if (!connectionString) {
       throw new Error(
-        "DATABASE_URL is not set. Copy backend/.env.example to backend/.env, " +
-          "or set DEV_DB=true to use the embedded development database.",
+        "No database is configured.\n" +
+          "      backend/.env is missing, or it does not set DATABASE_URL.\n" +
+          "      For local development, create the file from the template - it already\n" +
+          "      sets DEV_DB=true, which needs no database server:\n" +
+          "        PowerShell:  Copy-Item backend/.env.example backend/.env\n" +
+          "        macOS/Linux: cp backend/.env.example backend/.env",
       );
     }
     pool = new Pool({

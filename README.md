@@ -18,10 +18,36 @@ Requirements: Node 20+ and, for production, PostgreSQL 13+.
 
 ```bash
 npm install                 # installs both workspaces
+```
 
+Create your config file (Windows PowerShell and macOS/Linux differ):
+
+```powershell
+# Windows (PowerShell)
+Copy-Item backend/.env.example backend/.env
+```
+
+```bash
+# macOS / Linux
 cp backend/.env.example backend/.env
-# edit backend/.env: set JWT_SECRET and ADMIN_EMAIL (see "Configuration")
+```
 
+Open `backend/.env` in your editor and set these values. This is file editing, **not**
+commands to run in a terminal:
+
+```ini
+JWT_SECRET=<paste a generated secret>
+ADMIN_EMAIL="admin@yourclinic.co.ke"
+ADMIN_PASSWORD="choose-a-password-of-10-chars-or-more"
+```
+
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
+
+Then:
+
+```bash
 npm run setup               # creates all 18 tables, roles, admin + service catalogue
 npm run dev                 # API on :4000, website on :5173
 ```
@@ -32,6 +58,12 @@ Open <http://localhost:5173> for the website and <http://localhost:5173/staff> t
 > embedded PostgreSQL (PGlite — real Postgres compiled to WebAssembly) in `backend/.data/`,
 > so you can run the whole system locally with no database server at all. Never use this in
 > production.
+>
+> The embedded database listens on `DEV_DB_PORT` (default 5432). Nothing outside the process
+> connects to that port. If it is unavailable — a local Postgres, or a range Windows has
+> reserved — leave `DEV_DB_PORT` unset and a free port is chosen automatically. Only one
+> process may use the database at a time; `db:migrate`, `db:seed` and `db:demo` therefore
+> must not be run while `npm run dev` is going.
 
 ### Optional: sample data for a walkthrough
 

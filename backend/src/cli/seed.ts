@@ -1,7 +1,7 @@
 import readline from "node:readline/promises";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { loadEnv } from "../env";
+import { envFileMissing, loadEnv, missingEnvFileHint } from "../env";
 
 loadEnv();
 
@@ -192,8 +192,12 @@ async function main() {
 
   const adminEmail = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
   if (!adminEmail) {
+    if (envFileMissing) {
+      throw new Error(missingEnvFileHint());
+    }
     throw new Error(
-      "ADMIN_EMAIL is not set. Add it to backend/.env (see .env.example) so the first administrator can be created.",
+      "ADMIN_EMAIL is not set in backend/.env, so no administrator can be created.\n" +
+        '      Add a line such as: ADMIN_EMAIL="admin@yourclinic.co.ke"',
     );
   }
 

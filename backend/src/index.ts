@@ -1,4 +1,4 @@
-import { loadEnv } from "./env";
+import { envFileMissing, loadEnv } from "./env";
 
 loadEnv();
 
@@ -10,10 +10,16 @@ const HOST = process.env.HOST || "0.0.0.0";
 
 async function main() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    const guidance = envFileMissing
+      ? "      backend/.env does not exist yet. Create it first:\n" +
+        "        PowerShell:  Copy-Item backend/.env.example backend/.env\n" +
+        "        macOS/Linux: cp backend/.env.example backend/.env\n" +
+        "      Then set JWT_SECRET to a 32+ character random string."
+      : "      Add a 32+ character random string to JWT_SECRET in backend/.env.";
     console.error(
       "[api] JWT_SECRET is missing or too short.\n" +
-        "      Add a 32+ character random string to backend/.env\n" +
-        '      Generate one: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'base64url\'))"',
+        guidance +
+        '\n      Generate one: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'base64url\'))"',
     );
     process.exit(1);
   }
