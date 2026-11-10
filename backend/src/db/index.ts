@@ -112,24 +112,16 @@ async function portIsAvailable(port: number): Promise<boolean> {
  */
 async function chooseDbPort(): Promise<number> {
   const configured = process.env.DEV_DB_PORT ? Number(process.env.DEV_DB_PORT) : null;
-  const preferred = configured ?? 5432;
 
-  if (await portIsAvailable(preferred)) return preferred;
+  if (configured && (await portIsAvailable(configured))) return configured;
 
-  if (configured) {
-    throw new Error(
-      `DEV_DB_PORT=${configured} cannot be used on this machine.\n` +
-        "      Either another program owns that port, or Windows has reserved it\n" +
-        "      (Hyper-V and WinNAT reserve ranges of ports).\n" +
-        `      Fix it in backend/.env: change DEV_DB_PORT to a different number\n` +
-        "      (5433, 5434, 5435 ... whichever is free), or delete the line entirely\n" +
-        "      and a free port will be chosen for you automatically.",
-    );
-  }
-
-  // Nothing was configured, so fall back to a port the OS gives us.
+  // Nothing outside this process connects to the embedded database, so a fixed
+  // port is a convenience rather than a requirement. If it is unusable - a
+  // local Postgres, or a range Windows has reserved - take a free one instead
+  // of blocking a first run. The lock file, not the port, is what guarantees
+  // a directory is opened only once.
   const net = await import("node:net");
-  const ephemeral = await new Promise<number | null>((resolve) => {
+  const fallback = await new Promise<number | null>((resolve) => {
     const srv = net.createServer();
     srv.once("error", () => resolve(null));
     srv.listen(0, "127.0.0.1", () => {
@@ -139,13 +131,31 @@ async function chooseDbPort(): Promise<number> {
     });
   });
 
-  if (!ephemeral) throw new Error("Could not find a free port for the embedded database.");
-  console.log(
-    `[db] port ${preferred} is not usable on this machine (reserved or in use); using ${ephemeral} instead`,
-  );
-  return ephemeral;
+  if (!fallback) {
+    throw new Error(
+      configured
+        ? `DEV_DB_PORT=${configured} is unavailable and no free port could be found.`
+        : "Could not find a free port for the embedded database.",
+    );
+  }
+
+  if (configured) {
+    console.log(
+      `[db] DEV_DB_PORT=${configured} is not usable on this machine; using ${fallback} instead.`,
+    );
+  }
+  return fallback;
 }
 
+/**
+ * Claims sole ownership of a database directory.
+ *
+ * The embedded database is a set of files. Two processes writing them at once
+ * corrupts the store, and the damage is not obvious until much later. A port
+ * check is not enough: on Windows a port can be reserved by the OS (Hyper-V and
+ * WinNAT reserve ranges), and two copies configured with different ports would
+ * both open the same files. A lock file does not depend on either.
+ */
 export function isEmbeddedDb(): boolean {
   return embedded !== null;
 }
