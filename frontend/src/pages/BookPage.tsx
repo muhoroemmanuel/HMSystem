@@ -67,6 +67,11 @@ export default function BookPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingSite, setLoadingSite] = useState(true);
+  // A failed request and an empty catalogue are different problems: one means
+  // "we could not ask", the other "the clinic has not added anything yet".
+  // Showing both at once told patients there were no services when in fact the
+  // API was unreachable.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const [step, setStep] = useState(0);
   const [serviceId, setServiceId] = useState<string>(params.get("service") || "");
@@ -103,7 +108,10 @@ export default function BookPage() {
           document.title = `Book an appointment · ${data.settings.clinicName}`;
         }
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        setLoadFailed(true);
+        setError(err.message);
+      })
       .finally(() => setLoadingSite(false));
   }, []);
 
@@ -321,7 +329,28 @@ export default function BookPage() {
             {/* STEP 1 — service */}
             {!loadingSite && step === 0 ? (
               <>
-                {services.length === 0 ? (
+                {loadFailed ? (
+                  <div className="alert alert-error">
+                    <span>⚠️</span>
+                    <span>
+                      We could not load the booking form. Check your connection and{" "}
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => window.location.reload()}
+                      >
+                        try again
+                      </button>
+                      , or call{" "}
+                      {settings?.phone ? (
+                        <a href={`tel:${settings.phone}`}>{settings.phone}</a>
+                      ) : (
+                        "the clinic"
+                      )}{" "}
+                      to book.
+                    </span>
+                  </div>
+                ) : services.length === 0 ? (
                   <div className="alert alert-info">
                     No services are listed yet. Please call{" "}
                     {settings?.phone ? <a href={`tel:${settings.phone}`}>{settings.phone}</a> : "the clinic"} to
