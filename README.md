@@ -123,6 +123,39 @@ works identically on Supabase, Neon, RDS or a local install — there is no vend
 | **DBeaver / TablePlus / pgAdmin** | Point them at `DATABASE_URL`. |
 | **In the app** | Staff → **Staff & roles → Audit log** shows every create/update/payment with who did it and from which IP. |
 
+> Where your data lives depends on `DEV_DB` in `backend/.env`. With `DEV_DB=true` it is the
+> embedded database in `backend/.data/pglite` — real PostgreSQL, but a local directory that no
+> external tool can open. Set `DEV_DB=false` and point `DATABASE_URL` at Supabase to store
+> everything in the cloud instead, which is what makes the rows above (Table Editor, `psql`,
+> DBeaver) available.
+
+### Moving an existing install to Supabase
+
+The schema is ordinary PostgreSQL, so this is configuration, not a rewrite:
+
+1. Create a project at supabase.com and wait for it to finish provisioning.
+2. **Project Settings → Database → Connection string → URI**, and choose the **session pooler**
+   (port 5432). Copy it.
+   - Use the *session* pooler, not the *transaction* pooler (6543). The transaction pooler does
+     not support the prepared statements and multi-statement transactions that migrations need,
+     so `npm run db:migrate` can fail against it.
+   - The string may include `pgbouncer=true&connection_limit=1`. Those are pooler parameters,
+     not PostgreSQL settings; the app strips them before connecting. Paste the string as-is.
+3. In `backend/.env`:
+
+   ```ini
+   DEV_DB=false
+   DATABASE_URL="postgresql://postgres.<project>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
+   ```
+
+4. `npm run db:migrate` then `npm run db:seed`. All 18 tables and your administrator are created.
+5. `npm run dev`, then inspect rows under **Table Editor** in the Supabase dashboard.
+
+Data in `backend/.data/pglite` does **not** transfer automatically — the embedded database files
+are not a portable Postgres data directory. Move before entering real patients, or re-enter them.
+Carrying existing rows across needs a manual `pg_dump` from a real PostgreSQL server; the
+embedded database has no `pg_dump` binary, so plan to start on Supabase before going live.
+
 ### "Should I just use Supabase for everything?"
 
 **Yes — as the database, not as the backend.** Use Supabase for Postgres (plus its dashboard,

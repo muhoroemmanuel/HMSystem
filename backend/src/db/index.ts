@@ -21,6 +21,28 @@ let embedded: { stop: () => Promise<void> } | null = null;
 
 const connectionString = process.env.DATABASE_URL || "";
 
+/**
+ * Strips query parameters that belong to a connection pooler rather than to
+ * PostgreSQL itself.
+ *
+ * Supabase shows connection strings containing `pgbouncer=true` and
+ * `connection_limit=1`. `pg` forwards unrecognised query parameters to the
+ * server as startup parameters, and PostgreSQL rejects those with
+ * "unsupported startup parameter" - so pasting Supabase's string verbatim
+ * fails to connect. Pool size is configured on this side instead.
+ */
+function cleanConnectionString(url: string): string {
+  try {
+    const parsed = new URL(url);
+    for (const key of ["pgbouncer", "connection_limit", "pool_timeout", "connect_timeout"]) {
+      parsed.searchParams.delete(key);
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 function sslFor(url: string): false | { rejectUnauthorized: boolean } {
   if (/sslmode=(disable|allow)/i.test(url)) return false;
   if (/sslmode=(require|prefer|verify-ca|verify-full)/i.test(url)) {
@@ -216,9 +238,10 @@ export async function initDatabase(): Promise<void> {
           "        macOS/Linux: cp backend/.env.example backend/.env",
       );
     }
+    const url = cleanConnectionString(connectionString);
     pool = new Pool({
-      connectionString,
-      ssl: sslFor(connectionString),
+      connectionString: url,
+      ssl: sslFor(url),
       max: Number(process.env.DB_POOL_MAX || 10),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
